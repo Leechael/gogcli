@@ -99,10 +99,14 @@ func (c *GmailBatchAttachmentsCmd) Run(ctx context.Context, flags *RootFlags) er
 	results := make(chan result, len(msgIDs))
 	var wg sync.WaitGroup
 
+	cancelled := false
 	for i, id := range msgIDs {
 		select {
 		case sem <- struct{}{}:
 		case <-ctx.Done():
+			cancelled = true
+		}
+		if cancelled {
 			break
 		}
 
