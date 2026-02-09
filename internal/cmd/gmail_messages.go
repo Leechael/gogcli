@@ -15,7 +15,8 @@ import (
 )
 
 type GmailMessagesCmd struct {
-	Search GmailMessagesSearchCmd `cmd:"" name:"search" group:"Read" help:"Search messages using Gmail query syntax"`
+	Search   GmailMessagesSearchCmd   `cmd:"" name:"search" group:"Read" help:"Search messages using Gmail query syntax"`
+	BatchGet GmailMessagesBatchGetCmd `cmd:"" name:"batch-get" group:"Read" help:"Batch get message details by query"`
 }
 
 type GmailMessagesSearchCmd struct {

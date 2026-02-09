@@ -12,8 +12,10 @@ import (
 )
 
 type GmailBatchCmd struct {
-	Delete GmailBatchDeleteCmd `cmd:"" name:"delete" help:"Permanently delete multiple messages"`
-	Modify GmailBatchModifyCmd `cmd:"" name:"modify" help:"Modify labels on multiple messages"`
+	Delete      GmailBatchDeleteCmd      `cmd:"" name:"delete" help:"Permanently delete multiple messages"`
+	Modify      GmailBatchModifyCmd      `cmd:"" name:"modify" help:"Modify labels on multiple messages"`
+	Cleanup     GmailBatchCleanupCmd     `cmd:"" name:"cleanup" help:"Clean up messages older than N days"`
+	Attachments GmailBatchAttachmentsCmd `cmd:"" name:"attachments" help:"Search and download attachments"`
 }
 
 type GmailBatchDeleteCmd struct {
