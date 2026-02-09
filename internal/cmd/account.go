@@ -46,6 +46,10 @@ func requireAccount(flags *RootFlags) (string, error) {
 		}
 	}
 
+	if envTokenVarsSet() {
+		return "", usage("GOG_CLIENT_ID, GOG_CLIENT_SECRET and GOG_REFRESH_TOKEN are set but GOG_ACCOUNT is missing; set GOG_ACCOUNT or use --account")
+	}
+
 	if store, err := openSecretsStoreForAccount(); err == nil {
 		if defaultEmail, err := store.GetDefaultAccount(client); err == nil {
 			defaultEmail = strings.TrimSpace(defaultEmail)
@@ -94,4 +98,10 @@ func shouldAutoSelectAccount(value string) bool {
 	default:
 		return false
 	}
+}
+
+func envTokenVarsSet() bool {
+	return strings.TrimSpace(os.Getenv("GOG_CLIENT_ID")) != "" &&
+		strings.TrimSpace(os.Getenv("GOG_CLIENT_SECRET")) != "" &&
+		strings.TrimSpace(os.Getenv("GOG_REFRESH_TOKEN")) != ""
 }
