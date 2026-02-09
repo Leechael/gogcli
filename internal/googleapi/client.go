@@ -95,8 +95,6 @@ func optionsForAccount(ctx context.Context, service googleauth.Service, email st
 func optionsForAccountScopes(ctx context.Context, serviceLabel string, email string, scopes []string) ([]option.ClientOption, error) {
 	slog.Debug("creating client options with custom scopes", "serviceLabel", serviceLabel, "email", email)
 
-	var creds config.ClientCredentials
-
 	var ts oauth2.TokenSource
 
 	if serviceAccountTS, saPath, ok, err := tokenSourceForServiceAccountScopes(ctx, email, scopes); err != nil {
@@ -104,12 +102,18 @@ func optionsForAccountScopes(ctx context.Context, serviceLabel string, email str
 	} else if ok {
 		slog.Debug("using service account credentials", "email", email, "path", saPath)
 		ts = serviceAccountTS
+	} else if envTS, envOK, envErr := envTokenSource(ctx, scopes); envErr != nil {
+		return nil, fmt.Errorf("env var token source: %w", envErr)
+	} else if envOK {
+		slog.Debug("using env var credentials", "email", email)
+		ts = envTS
 	} else {
 		client, err := authclient.ResolveClient(ctx, email)
 		if err != nil {
 			return nil, fmt.Errorf("resolve client: %w", err)
 		}
 
+		var creds config.ClientCredentials
 		if c, err := readClientCredentials(client); err != nil {
 			return nil, fmt.Errorf("read credentials: %w", err)
 		} else {
