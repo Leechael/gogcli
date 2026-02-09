@@ -88,33 +88,32 @@ func (c *GmailBatchAttachmentsCmd) Run(ctx context.Context, flags *RootFlags) er
 	type msgAttachments struct {
 		messageID   string
 		attachments []attachmentInfo
+		fetchErr    string
 	}
 
 	type result struct {
 		index int
 		data  msgAttachments
-		err   error
 	}
 
 	results := make(chan result, len(msgIDs))
 	var wg sync.WaitGroup
 
 	for i, id := range msgIDs {
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break
+		}
+
 		wg.Add(1)
 		go func(idx int, messageID string) {
 			defer wg.Done()
-
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-			case <-ctx.Done():
-				results <- result{index: idx, err: ctx.Err()}
-				return
-			}
+			defer func() { <-sem }()
 
 			msg, err := svc.Users.Messages.Get("me", messageID).Format("full").Context(ctx).Do()
 			if err != nil {
-				results <- result{index: idx, err: fmt.Errorf("message %s: %w", messageID, err)}
+				results <- result{index: idx, data: msgAttachments{messageID: messageID, fetchErr: err.Error()}}
 				return
 			}
 
@@ -129,18 +128,8 @@ func (c *GmailBatchAttachmentsCmd) Run(ctx context.Context, flags *RootFlags) er
 	}()
 
 	ordered := make([]msgAttachments, len(msgIDs))
-	var firstErr error
 	for r := range results {
-		if r.err != nil {
-			if firstErr == nil {
-				firstErr = r.err
-			}
-			continue
-		}
 		ordered[r.index] = r.data
-	}
-	if firstErr != nil {
-		return firstErr
 	}
 
 	filter := strings.ToLower(strings.TrimSpace(c.FilenameFilter))
@@ -148,6 +137,13 @@ func (c *GmailBatchAttachmentsCmd) Run(ctx context.Context, flags *RootFlags) er
 	var allSummaries []attachmentDownloadSummary
 	for _, ma := range ordered {
 		if ma.messageID == "" {
+			continue
+		}
+		if ma.fetchErr != "" {
+			allSummaries = append(allSummaries, attachmentDownloadSummary{
+				MessageID:     ma.messageID,
+				DownloadError: fmt.Sprintf("fetch: %s", ma.fetchErr),
+			})
 			continue
 		}
 		for _, att := range ma.attachments {

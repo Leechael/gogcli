@@ -43,9 +43,13 @@ func (c *GmailBatchCleanupCmd) Run(ctx context.Context, flags *RootFlags) error 
 	before := cutoff.Format("2006/01/02")
 
 	extra := strings.TrimSpace(strings.Join(c.Query, " "))
-	q := fmt.Sprintf("label:%s before:%s", label, before)
+	quotedLabel := label
+	if strings.ContainsAny(label, " \t") {
+		quotedLabel = `"` + label + `"`
+	}
+	q := fmt.Sprintf("label:%s before:%s", quotedLabel, before)
 	if extra != "" {
-		q = fmt.Sprintf("label:%s %s before:%s", label, extra, before)
+		q = fmt.Sprintf("label:%s %s before:%s", quotedLabel, extra, before)
 	}
 
 	svc, err := newGmailService(ctx, account)
